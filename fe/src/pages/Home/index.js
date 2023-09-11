@@ -1,45 +1,62 @@
-import { useEffect, useMemo, useState } from 'react';
+/* eslint-disable react/jsx-one-expression-per-line */
+/* eslint-disable no-nested-ternary */
+import {
+  useEffect, useMemo, useState, useCallback,
+} from 'react';
 import { Link } from 'react-router-dom';
 
 import formatPhone from '../../utils/formatPhone';
+import ContactService from '../../services/ContactService';
 
 import {
-  Container, InputSearchContainer, Header, ListHeader, Card,
+  Container,
+  InputSearchContainer,
+  Header,
+  ListHeader,
+  Card,
+  ErrorContainer,
+  EmptyListContainer,
+  SearchNotFoundContainer,
 } from './styles';
 import Loader from '../../components/Loader';
+import Button from '../../components/Button';
 
 import arrow from '../../assets/images/icons/arrow.svg';
 import edit from '../../assets/images/icons/edit.svg';
 import trash from '../../assets/images/icons/trash.svg';
-import ContactService from '../../services/ContactService';
+import sad from '../../assets/images/icons/sad.svg';
+import emptyBox from '../../assets/images/icons/empty-box.svg';
+import magnifierQuestion from '../../assets/images/icons/magnifier-question.svg';
 
 export default function Home() {
   const [contacts, setContacts] = useState([]);
   const [orderBy, setOrderBy] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   const filteredContacts = useMemo(() => contacts.filter((contact) => (
     contact.name.toLowerCase().includes(searchTerm.toLowerCase())
   )), [contacts, searchTerm]);
 
-  useEffect(() => {
-    async function loadContacts() {
-      try {
-        setIsLoading(true);
+  const loadContacts = useCallback(async () => {
+    try {
+      setIsLoading(true);
 
-        const contactsList = await ContactService.listContacts(orderBy);
+      const contactsList = await ContactService.listContacts(orderBy);
 
-        setContacts(contactsList);
-      } catch (error) {
-        console.log({ error });
-      } finally {
-        setIsLoading(false);
-      }
+      setHasError(false);
+      setContacts(contactsList);
+    } catch {
+      setHasError(true);
+    } finally {
+      setIsLoading(false);
     }
-
-    loadContacts();
   }, [orderBy]);
+
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
 
   function handleChangeSearchTerm(event) {
     setSearchTerm(event.target.value);
@@ -50,57 +67,110 @@ export default function Home() {
       prevState === 'asc' ? 'desc' : 'asc'));
   }
 
+  function handleRefetchContacts() {
+    loadContacts();
+  }
+
   return (
     <Container>
       <Loader isLoading={isLoading} />
-      <InputSearchContainer>
-        <input
-          onChange={handleChangeSearchTerm}
-          value={searchTerm}
-          type="text"
-          placeholder="Pesquisar Contato"
-        />
-      </InputSearchContainer>
 
-      <Header>
-        <strong>
-          {filteredContacts.length}
-          {filteredContacts.length === 1 ? ' contato' : ' contatos'}
-        </strong>
+      {contacts.length > 0 && (
+        <InputSearchContainer>
+          <input
+            onChange={handleChangeSearchTerm}
+            value={searchTerm}
+            type="text"
+            placeholder="Pesquisar Contato"
+          />
+        </InputSearchContainer>
+      )}
+
+      <Header
+        justifyContent={
+          hasError
+            ? 'flex-end'
+            : contacts.length > 0
+              ? 'space-between'
+              : 'center'
+          }
+      >
+        {(!hasError && contacts.length > 0) && (
+          <strong>
+            {filteredContacts.length}
+            {filteredContacts.length === 1 ? ' contato' : ' contatos'}
+          </strong>
+        )}
         <Link to="/new">Novo Contato</Link>
       </Header>
 
-      {filteredContacts.length !== 0 && (
-        <ListHeader orderBy={orderBy}>
-          <button type="button" onClick={handleToggleOrderBy}>
-            <span>Nome</span>
-            <img src={arrow} alt="Arrow" />
-          </button>
-        </ListHeader>
+      {hasError && (
+        <ErrorContainer>
+          <img src={sad} alt="Sad" />
+          <div className="details">
+            <strong>Ocorreu um erro ao obter os seus contatos!</strong>
+            <Button type="button" onClick={handleRefetchContacts}>
+              Tentar Novamente
+            </Button>
+          </div>
+        </ErrorContainer>
       )}
 
-      {filteredContacts.map((contact) => (
-        <Card key={contact.id}>
-          <div className="info">
-            <div className="contact-name">
-              <strong>{contact.name}</strong>
-              {contact.category_name
-                  && <small>{contact.category_name}</small>}
-            </div>
-            <span>{contact.email}</span>
-            <span>{formatPhone(contact.phone)}</span>
-          </div>
+      {!hasError && (
+        <>
+          {(contacts.length < 1 && !isLoading) && (
+            <EmptyListContainer>
+              <img src={emptyBox} alt="Empty box" />
+              <p>
+                Você ainda não tem nenhum contato cadastrado!
+                Clique no botão <strong>”Novo contato”</strong> à cima
+                para cadastrar o seu primeiro!
+              </p>
+            </EmptyListContainer>
+          )}
 
-          <div className="actions">
-            <Link to={`/edit/${contact.id}`}>
-              <img src={edit} alt="Edit" />
-            </Link>
-            <button type="button">
-              <img src={trash} alt="Delete" />
+          {(contacts.length > 0 && filteredContacts.length < 1) && (
+            <SearchNotFoundContainer>
+              <img src={magnifierQuestion} alt="No user has found" />
+              <span>
+                Nenhum resultado foi encontrado para <strong>”{searchTerm}”</strong>.
+              </span>
+            </SearchNotFoundContainer>
+          )}
+
+          {filteredContacts.length !== 0 && (
+          <ListHeader orderBy={orderBy}>
+            <button type="button" onClick={handleToggleOrderBy}>
+              <span>Nome</span>
+              <img src={arrow} alt="Arrow" />
             </button>
-          </div>
-        </Card>
-      ))}
+          </ListHeader>
+          )}
+
+          {filteredContacts.map((contact) => (
+            <Card key={contact.id}>
+              <div className="info">
+                <div className="contact-name">
+                  <strong>{contact.name}</strong>
+                  {contact.category_name
+                  && <small>{contact.category_name}</small>}
+                </div>
+                <span>{contact.email}</span>
+                <span>{formatPhone(contact.phone)}</span>
+              </div>
+
+              <div className="actions">
+                <Link to={`/edit/${contact.id}`}>
+                  <img src={edit} alt="Edit" />
+                </Link>
+                <button type="button">
+                  <img src={trash} alt="Delete" />
+                </button>
+              </div>
+            </Card>
+          ))}
+        </>
+      )}
     </Container>
   );
 }
