@@ -7,6 +7,7 @@ import isEmailValid from '../../utils/isEmailValid';
 import formatPhone from '../../utils/formatPhone';
 import useErrors from '../../hooks/useErrors';
 import CategoryService from '../../services/CategoryService';
+import useSafeAsyncState from '../../hooks/useSafeAsyncState';
 
 import FormGroup from '../FormGroup';
 import Input from '../Input';
@@ -20,8 +21,8 @@ const ContactForm = forwardRef(({ buttonLabel, onSubmit }, ref) => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
-  const [categories, setCategories] = useState([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [categories, setCategories] = useSafeAsyncState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useSafeAsyncState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useImperativeHandle(ref, () => ({
@@ -29,7 +30,13 @@ const ContactForm = forwardRef(({ buttonLabel, onSubmit }, ref) => {
       setName(contact.name ?? '');
       setEmail(contact.email ?? '');
       setPhone(formatPhone(contact.phone ?? ''));
-      setSelectedCategoryId(contact.category_id ?? '');
+      setSelectedCategoryId(contact.category.id ?? '');
+    },
+    resetFields: () => {
+      setName('');
+      setEmail('');
+      setPhone(formatPhone(''));
+      setSelectedCategoryId('');
     },
   }), []);
 
@@ -53,7 +60,7 @@ const ContactForm = forwardRef(({ buttonLabel, onSubmit }, ref) => {
     }
 
     loadCategories();
-  }, []);
+  }, [setCategories, setIsLoadingCategories]);
 
   function handleNameChange(event) {
     setName(event.target.value);

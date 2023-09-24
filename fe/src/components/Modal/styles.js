@@ -6,7 +6,7 @@ export const Overlay = styled.div`
   backdrop-filter: blur(5px);
   display: flex;
   left: 0;
-  position: absolute;
+  position: fixed;
   height: 100%;
   top: 0;
   justify-content: center;
@@ -21,15 +21,15 @@ export const Container = styled.div`
   padding: 24px;
   width: 100%;
 
-  h1 {
+  > h1 {
     font-size: 22px;
     color: ${({ theme, danger }) => (
     danger ? theme.colors.danger.main : theme.colors.gray[900]
   )}
   }
 
-  p {
-    margin-top: 8px;
+  .modal-body {
+    margin-top: 32px;
   }
 `;
 
@@ -43,7 +43,11 @@ export const Footer = styled.footer`
     background: transparent;
     border: none;
     font-size: 16px;
-    margin-right: 8px;
-    color: ${({ theme }) => theme.colors.gray[200]}
+    margin-right: 24px;
+    color: ${({ theme }) => theme.colors.gray[200]};
+
+    &[disabled] {
+      cursor: default;
+    }
   }
 `;
